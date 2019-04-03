@@ -63,6 +63,10 @@ int main() {
     while(1) {
 	// use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 	// remember the core timer runs at half the sysclk
-        ;
+        _CP0_SET_COUNT(0);
+        while(_CP0_GET_COUNT() <= 24000){
+            ; // delay for 0.5 milliseconds. Core timer runs at 24 MHz.
+        }
+        LATAbits.LATA4 = !LATAbits.LATA4; // toggle green LED
     }
 }
