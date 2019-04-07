@@ -20368,7 +20368,53 @@ Source: www.kingbright.com</description>
 <gate name="G$1" symbol="PIC32MX270F256D" x="0" y="0"/>
 </gates>
 <devices>
-<device name="">
+<device name="" package="TQFP44">
+<connects>
+<connect gate="G$1" pin="1.B9" pad="1"/>
+<connect gate="G$1" pin="10.VUSB3V3" pad="10"/>
+<connect gate="G$1" pin="11.B13" pad="11"/>
+<connect gate="G$1" pin="12.A10" pad="12"/>
+<connect gate="G$1" pin="13.A7" pad="13"/>
+<connect gate="G$1" pin="14.B14" pad="14"/>
+<connect gate="G$1" pin="15.B15" pad="15"/>
+<connect gate="G$1" pin="16.AVSS" pad="16"/>
+<connect gate="G$1" pin="17.AVDD" pad="17"/>
+<connect gate="G$1" pin="18.MCLR" pad="18"/>
+<connect gate="G$1" pin="19.A0" pad="19"/>
+<connect gate="G$1" pin="2.C6" pad="2"/>
+<connect gate="G$1" pin="20.A1" pad="20"/>
+<connect gate="G$1" pin="21.B0" pad="21"/>
+<connect gate="G$1" pin="22.B1" pad="22"/>
+<connect gate="G$1" pin="23.B2" pad="23"/>
+<connect gate="G$1" pin="24.B3" pad="24"/>
+<connect gate="G$1" pin="25.C0" pad="25"/>
+<connect gate="G$1" pin="26.C1" pad="26"/>
+<connect gate="G$1" pin="27.C2" pad="27"/>
+<connect gate="G$1" pin="28.VDD" pad="28"/>
+<connect gate="G$1" pin="29.VSS" pad="29"/>
+<connect gate="G$1" pin="3.C7" pad="3"/>
+<connect gate="G$1" pin="30.A2" pad="30"/>
+<connect gate="G$1" pin="31.A3" pad="31"/>
+<connect gate="G$1" pin="32.A8" pad="32"/>
+<connect gate="G$1" pin="33.B4" pad="33"/>
+<connect gate="G$1" pin="34.A4" pad="34"/>
+<connect gate="G$1" pin="35.A9" pad="35"/>
+<connect gate="G$1" pin="36.C3" pad="36"/>
+<connect gate="G$1" pin="37.C4" pad="37"/>
+<connect gate="G$1" pin="38.C5" pad="38"/>
+<connect gate="G$1" pin="39.VSS" pad="39"/>
+<connect gate="G$1" pin="4.C8" pad="4"/>
+<connect gate="G$1" pin="40.VDD" pad="40"/>
+<connect gate="G$1" pin="41.B5" pad="41"/>
+<connect gate="G$1" pin="42.VBUS" pad="42"/>
+<connect gate="G$1" pin="43.B7" pad="43"/>
+<connect gate="G$1" pin="44.B8" pad="44"/>
+<connect gate="G$1" pin="5.C9" pad="5"/>
+<connect gate="G$1" pin="6.VSS" pad="6"/>
+<connect gate="G$1" pin="7.VCAP" pad="7"/>
+<connect gate="G$1" pin="8.B10" pad="8"/>
+<connect gate="G$1" pin="9.B11" pad="9"/>
+</connects>
 <technologies>
 <technology name=""/>
 </technologies>
