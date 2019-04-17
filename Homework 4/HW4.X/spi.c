@@ -1,20 +1,22 @@
 #include <xc.h>
 #include "spi.h"
 
+#define CS LATBbits.LATB3 // chip select pin
+
 void initSPI1(){
-    RPA1Rbits.RPA1R = 0b0011;  // SDO1 assigned to pin A1.
+    // SCK is tied to pin B14
+    RPB8Rbits.RPB8R = 0b0011;  // SDO1 assigned to pin B8.
     
+    ANSELBbits.ANSB3 = 0; // Turn off analog mode for pin B3
     TRISBbits.TRISB3 = 0;  // Pin B3 set as digital output which will act as manual SS1
     CS = 1; 
     
     SPI1CON = 0;              // turn off the spi module and reset it
     SPI1BUF;                  // clear the rx buffer by reading from it
-    SPI1BRG = 0x1;            // baud rate to 10 MHz [SPI4BRG = (80000000/(2*desired))-1]
+    SPI1BRG = 0x1             // baud rate to 12 MHz [SPI4BRG = (48000000/(2*desired))-1]
     SPI1STATbits.SPIROV = 0;  // clear the overflow bit
-    
     SPI1CONbits.CKE = 1;      // data changes when clock goes from hi to lo (since CKP is 0)
     SPI1CONbits.MSTEN = 1;    // master operation
-    
     SPI1CONbits.ON = 1; // turn on SPI1 
 }
 

@@ -68,7 +68,7 @@ int main() {
             ; // delay for 0.5 milliseconds. Core timer runs at 24 MHz.
         }
         LATAbits.LATA4 = !LATAbits.LATA4; // toggle green LED
-        while (!(PORTBbits.RB4)){s
+        while (!(PORTBbits.RB4)){
             LATAbits.LATA4 = 0; // turn off green LED while button is pressed
         }
     }

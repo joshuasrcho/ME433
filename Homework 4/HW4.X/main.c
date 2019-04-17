@@ -39,20 +39,17 @@
 
 
 int main(void) {
+    initSPI1();
     int i = 0;
-    TRISAbits.TRISA4 = 0;
-    LATAbits.LATA4 = 1; // A4 is HIGH (green LED on)
 
   while(1) {
-	// _CP0_SET_COUNT(0);
-     LATAbits.LATA4 = !LATAbits.LATA4; // toggle green LED
-	int f = 2048 + 2048*sin(i*2*3.1415/1000*10);  //should make a 10Hz sin wave
+	int sinewave = 2048 + 2048*sin(i*2*3.1415/1000*10);  //should make a 10Hz sin wave
+    int triwave = (4095/100.0) * (100 - abs(i % (2*100) - 100));
 	i++;
 
-	setVoltage(0, 2048);		// setVoltage(channel,voltage). channel = 0 for DACA, 1 for DACB
-	//setVoltage(1,256);		//test
+	setVoltage(0, sinewave);		// setVoltage(channel,voltage). channel = 0 for DACA, 1 for DACB
+	setVoltage(1,triwave);
 
-	//while(_CP0_GET_COUNT() < 2400000000/1000) {;}  //check this is 24Million
   }
   return 0;
 }
