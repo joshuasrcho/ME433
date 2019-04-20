@@ -1,6 +1,8 @@
-#include "i2c_expander.h"
 #include "i2c_master_noint.h"
-// Demonstrate I2C by having the I2C1 talk to I2C5 on the same PIC32 (PIC32MX795F512H)
+#include <xc.h>
+#include <sys/attribs.h>  // __ISR macro
+
+// Demonstrate I2C by having the I2C1 talk to I2C5 on the same PIC32 (PIC32MX250F128H)
 // Master will use SDA2 (B2) and SCL2 (B3).  Connect these through resistors to
 // Vcc (3.3 V) (2.4k resistors recommended, but around that should be good enough)
 
@@ -40,20 +42,44 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 
+#define EXPANDER_ADDR 0b0100111 // device op code
 
-
-#define SLAVE_ADDR 0x32
+// Function prototypes
+void initExpander(void);
+void setExpander(unsigned char pin, unsigned char level);
+char getExpander();
 
 int main() {
-    i2c_master_setup();                       // init I2C2, which we use as a master
+    __builtin_disable_interrupts();
 
-    while(1) {
-      i2c_master_start();                     // Begin the start sequence
-      i2c_master_send(SLAVE_ADDR << 1);       // send the slave address, left shifted by 1, 
-                                              // which clears bit 0, indicating a write
-      i2c_master_send(master_write0);         // send a byte to the slave       
-      i2c_master_send(master_write1);         // send another byte to the slave
-      i2c_master_restart();                   // send a RESTART so we can begin reading 
+    // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+    __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+
+    // 0 data RAM access wait states
+    BMXCONbits.BMXWSDRM = 0x0;
+
+    // enable multi vector interrupts
+    INTCONbits.MVEC = 0x1;
+
+    // disable JTAG to get pins back
+    DDPCONbits.JTAGEN = 0;
+    
+    __builtin_enable_interrupts();
+    
+    unsigned char ledState = 1;
+    i2c_master_setup();                       // init I2C2, which we use as a master
+    initExpander();                           // initialize MCP23008 I/O expander
+    i2c_master_restart();                 // send a RESTART 
+    setExpander(0,ledState);                     // set GP7 to HIGH  
+    
+    while(1){
+        _CP0_SET_COUNT(0);
+        while(_CP0_GET_COUNT() <= 12000) {;} // delay for 0.5 milliseconds. Core timer runs at 24 MHz.
+        ledState = !ledState;
+        i2c_master_restart();
+        setExpander(7,ledState);  
+        /*
+        i2c_master_restart();                   // send a RESTART so we can begin reading 
       i2c_master_send((SLAVE_ADDR << 1) | 1); // send slave address, left shifted by 1,
                                               // and then a 1 in lsb, indicating read
       master_read0 = i2c_master_recv();       // receive a byte from the bus
@@ -61,6 +87,26 @@ int main() {
       master_read1 = i2c_master_recv();       // receive another byte from the bus
       i2c_master_ack(1);                      // send NACK (1):  master needs no more bytes
       i2c_master_stop();                      // send STOP:  end transmission, give up bus
-    }
+    */}
     return 0;
+}
+
+void initExpander(void){
+    i2c_master_start();
+    i2c_master_send(EXPANDER_ADDR << 1); // send the slave address, left shifted by 1, 
+                                         // which clears bit 0, indicating a write
+    i2c_master_send(0x1);                // send I/O direction register address
+    i2c_master_send(0xF);                // set GP0-3 as inputs and GP4-7 as outputs
+}
+
+void setExpander(unsigned char pin, unsigned char level){
+    i2c_master_send(EXPANDER_ADDR << 1); // send the slave address, left shifted by 1, 
+                                         // which clears bit 0, indicating a write
+    i2c_master_send(0x0A);               // send output latch register address
+    i2c_master_send(level << pin);       // set pin to high or low
+}
+
+char getExpander(){
+    i2c_master_send((EXPANDER_ADDR << 1) | 1); // send slave address left shifted by 1,
+                                               // set least significant bit to 1, indicating a read
 }
