@@ -8,8 +8,10 @@
 void i2c_master_setup(void) {
   I2C2BRG = 53;                     // 400kHz baud rate. I2CBRG = [1/(2*Fsck) - PGD]*Pblck - 2 
                                     // look up PGD for your PIC32. PGD = 104 ns
-  ANSELBbits.ANSB2 = 0;             // turn off analog function for pins B2 and B3
+  ANSELBbits.ANSB2 = 0;             // turn off analog functions for pins B2 and B3
   ANSELBbits.ANSB3 = 0;
+  TRISAbits.TRISA4 = 0; 
+  LATAbits.LATA4 = 0;
   
   I2C2CONbits.ON = 1;               // turn on the I2C2 module
 }
@@ -30,7 +32,7 @@ void i2c_master_send(unsigned char byte) { // send a byte to slave
   while(I2C2STATbits.TRSTAT) { ; }  // wait for the transmission to finish
   if(I2C2STATbits.ACKSTAT) {        // if this is high, slave has not acknowledged
     // ("I2C2 Master: failed to receive ACK\r\n")
-      ;
+     ;
   }
 }
 
