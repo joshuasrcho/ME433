@@ -70,10 +70,10 @@ int main() {
     initExpander();                           // initialize MCP23008 I/O expander
     while(1){
         if (getExpander() >> 7){
-            setExpander(0,1);
+            setExpander(0,0);
         }
         else{
-            setExpander(0,0);
+            setExpander(0,1);
         }
     }
     return 0;
