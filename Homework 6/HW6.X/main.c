@@ -37,7 +37,7 @@
 #pragma config FUSBIDIO = ON // USB pins controlled by USB module
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
-int main(int argc, char** argv) {
+int main() {
     
     __builtin_disable_interrupts();
 
@@ -59,7 +59,15 @@ int main(int argc, char** argv) {
     LATAbits.LATA4 = 1; // A4 is HIGH (green LED on)
 
     __builtin_enable_interrupts();
+    
+    /*************************Actual Code**********************/
+  
+    SPI1_init();
+    LCD_init();
+    LCD_clearScreen(ILI9341_YELLOW);
+    
+   
 
-    return 0
+    return 0;
 }
 
