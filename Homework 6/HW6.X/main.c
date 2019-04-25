@@ -64,10 +64,27 @@ int main() {
   
     SPI1_init();
     LCD_init();
-    LCD_clearScreen(ILI9341_YELLOW);
+    LCD_clearScreen(ILI9341_WHITE );
+    
+    LCD_writeCharacter(100,100,'F');
     
    
 
     return 0;
 }
 
+void LCD_writeCharacter(unsigned short x, unsigned short y, char c){
+    int i, j;
+    for (i=0; i<5; i++){
+        for (j=0; j<8; j++){
+            char t = ASCII[c-32][i] >> (7-j);
+            t = t & 0x1;
+            if (t){
+                LCD_drawPixel(x+i,y-j,ILI9341_PURPLE);
+            }
+            else{
+                LCD_drawPixel(x+i,y+j,ILI9341_WHITE );
+            }
+        }
+    }   
+}
