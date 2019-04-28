@@ -1,5 +1,6 @@
 #include <xc.h>           // processor SFR definitions
 #include <sys/attribs.h>  // __ISR macro
+#include <stdio.h>
 #include "ili9341.h"
 
 // DEVCFG0
@@ -64,27 +65,71 @@ int main() {
   
     SPI1_init();
     LCD_init();
-    LCD_clearScreen(ILI9341_WHITE );
     
-    LCD_writeCharacter(100,100,'F');
+    char message[100];
+    int i;
+    float fps = 0;
+    char fpsm[20];
     
-   
+    LCD_clearScreen(ILI9341_YELLOW);
+    
+    while(1){
+        for (i = 0; i <= 100; i++){
+            _CP0_SET_COUNT(0);
+            sprintf(message,"Hello world! %3d", i);
+            LCD_writeString(28,32,message);
+            LCD_progressBar(28,50,i);
+            fps = 24000000.0/_CP0_GET_COUNT();
+            sprintf(fpsm,"FPS = %4.2f",fps);
+            LCD_writeString(28,100,fpsm);
+            int delaytime = _CP0_GET_COUNT();
+             while ((_CP0_GET_COUNT() - delaytime) < 2400000){
+                ;
+            }
+        }
+    }
+    
 
     return 0;
 }
 
 void LCD_writeCharacter(unsigned short x, unsigned short y, char c){
     int i, j;
-    for (i=0; i<5; i++){
-        for (j=0; j<8; j++){
-            char t = ASCII[c-32][i] >> (7-j);
-            t = t & 0x1;
-            if (t){
-                LCD_drawPixel(x+i,y-j,ILI9341_PURPLE);
+    if (x <= 235 && y <= 315){
+        for (i=0; i<5; i++){
+            for (j=0; j<8; j++){
+                char t = ASCII[c-32][i] >> (7-j);
+                t = t & 0x1;
+                if (t){
+                    LCD_drawPixel(x+i,y-j,ILI9341_PURPLE);
+                }
+                else{
+                    LCD_drawPixel(x+i,y-j,ILI9341_YELLOW );
+                }
+            }
+        }    
+    }
+    else{;}
+}
+
+void LCD_writeString(unsigned short x, unsigned short y, char* m){
+    int i = 0; 
+    while(m[i]){ 
+        LCD_writeCharacter(x+6*i, y, m[i]); 
+        i++;
+    }
+}
+
+void LCD_progressBar(unsigned short x, unsigned short y, int length){
+    int i, j;
+    for (i = 0; i < 100; i++){
+        for (j = 0; j < 3; j++){
+            if (i < length){
+                LCD_drawPixel(x+i,y+j,ILI9341_RED);
             }
             else{
-                LCD_drawPixel(x+i,y+j,ILI9341_WHITE );
+                LCD_drawPixel(x+i,y+j,ILI9341_LIGHTGREY);
             }
         }
-    }   
+    }
 }
