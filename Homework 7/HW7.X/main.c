@@ -48,7 +48,7 @@ void initIMU(void);
 void I2C_read_multiple(unsigned char addr, unsigned char rgstr, unsigned char * data, int lnt);
 void LCD_writeCharacter(unsigned short x, unsigned short y, char c);
 void LCD_writeString(unsigned short x, unsigned short y, char* m);
-void LCD_IMUBar(unsigned short x, unsigned short y, int length, int accelX, int accelY);
+void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY);
 
 int main() {
     __builtin_disable_interrupts();
@@ -95,19 +95,19 @@ int main() {
     
     while (1){
         I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
-        short temperature = (d[1] << 8) | d[0]; // shift high byte and OR with low byte 
-        short gyroX = (d[3] << 8) | d[2];
-        short gyroY = (d[5] << 8) | d[4];
-        short gyroZ = (d[7] << 8) | d[6];
-        short accelX = (d[9] << 8) | d[8];
-        short accelY = (d[11] << 8) | d[10];
-        short accelZ = (d[13] << 8) | d[12];
-        sprintf(message,"accelX:%hi",accelX);
+        short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
+        short gyroX = (d[2] << 8) | d[3];
+        short gyroY = (d[4] << 8) | d[5];
+        short gyroZ = (d[6] << 8) | d[7];
+        short accelX = (d[8] << 8) | d[9];
+        short accelY = (d[10] << 8) | d[11];
+        short accelZ = (d[12] << 8) | d[13];
+        sprintf(message,"accelX:%6d",accelX);
         LCD_writeString(20,20,message);
-        sprintf(message,"accelY:%hi",accelY);
+        sprintf(message,"accelY:%6d",accelY);
         LCD_writeString(20,40,message);
         
-        LCD_drawPixel(120+accelX/2000,160,ILI9341_RED);
+        LCD_IMUBar(120,160,accelX,accelY);
         
         _CP0_SET_COUNT(0);
         while(_CP0_GET_COUNT() < 1200000){
@@ -183,8 +183,36 @@ void LCD_writeString(unsigned short x, unsigned short y, char* m){
 }
 
 void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY){
-    int i;
-    for (i=0; i<3; i++){
-        LCD_drawPixel(120,160,ILI9341_RED);
+    int i, j;
+    // X direction
+    for (i = 0; i < 100; i++){
+        for (j = 0; j < 5; j++){
+            if (i < (accelX/100)){
+               LCD_drawPixel(x+i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+i,y+j,ILI9341_LIGHTGREY);
+            }
+            if (-i > (accelX/100)){
+                LCD_drawPixel(x-i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x-i,y+j,ILI9341_LIGHTGREY);
+            }
+            // Y direction
+            if (i < (accelY/100)){
+               LCD_drawPixel(x+j,y+i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y+i,ILI9341_LIGHTGREY);
+            }
+            if (-i >= (accelY/100)){
+                LCD_drawPixel(x+j,y-i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y-i,ILI9341_LIGHTGREY);
+            }
+        }
     }
+  
 }
