@@ -1,4 +1,5 @@
 #include "i2c_master_noint.h"
+#include "ili9341.h"
 #include <xc.h>
 #include <sys/attribs.h>  // __ISR macro
 
