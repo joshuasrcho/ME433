@@ -121,6 +121,27 @@ void APP_Initialize ( void )
     /* TODO: Initialize your application's state machine and other
      * parameters.
      */
+    
+    __builtin_disable_interrupts();
+
+    // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+    __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+
+    // 0 data RAM access wait states
+    BMXCONbits.BMXWSDRM = 0x0;
+
+    // enable multi vector interrupts
+    INTCONbits.MVEC = 0x1;
+
+    // disable JTAG to get pins back
+    DDPCONbits.JTAGEN = 0;
+
+    // do your TRIS and LAT commands here
+    TRISBbits.TRISB4 = 1; // B4 (pushbutton) is an input pin
+    TRISAbits.TRISA4 = 0; // A4 (green LED) is an output pin
+    LATAbits.LATA4 = 1; // A4 is HIGH (green LED on)
+
+    __builtin_enable_interrupts();
 }
 
 
@@ -154,7 +175,14 @@ void APP_Tasks ( void )
 
         case APP_STATE_SERVICE_TASKS:
         {
-        
+            _CP0_SET_COUNT(0);
+            while(_CP0_GET_COUNT() <= 12000){
+                ; // delay for 0.5 milliseconds. Core timer runs at 24 MHz.
+            }
+            LATAbits.LATA4 = !LATAbits.LATA4; // toggle green LED
+            while (!(PORTBbits.RB4)){
+                LATAbits.LATA4 = 0; // turn off green LED while button is pressed
+            }
             break;
         }
 
