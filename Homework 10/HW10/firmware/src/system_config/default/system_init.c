@@ -88,7 +88,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #pragma config UPLLEN =     ON
 /*** DEVCFG3 ***/
 
-#pragma config USERID =     0x0000
+#pragma config USERID =     0x0
 #pragma config PMDL1WAY =   OFF
 #pragma config IOL1WAY =    OFF
 #pragma config FUSBIDIO =   ON
@@ -448,9 +448,6 @@ void SYS_Initialize ( void* data )
     SYS_CLK_Initialize( NULL );
     SYS_DEVCON_Initialize(SYS_DEVCON_INDEX_0, (SYS_MODULE_INIT*)NULL);
     SYS_DEVCON_PerformanceConfig(SYS_CLK_SystemFrequencyGet());
-
-    /* Board Support Package Initialization */
-    BSP_Initialize();        
 
     /* Initialize Drivers */
     /* Initialize USB Driver */ 

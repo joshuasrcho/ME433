@@ -7,7 +7,7 @@
   <General>
     <HarmonyPath dnOrder="0" path="../../../../../../../microchip/harmony/v2_06"/>
     <Processor dnOrder="1" name="PIC32MX250F128B"/>
-    <Board dnOrder="2" name="Custom Board"/>
+    <Board dnOrder="2" name=" "/>
     <ForceOptimization dnOrder="3" flag="true"/>
     <MergeStrategy dnOrder="4" flag="USER_ALL"/>
   </General>
@@ -202,12 +202,12 @@
       <Template dnOrder="0">
         <Name dnOrder="0">sys_ports_static.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default/framework/system/ports/src</Path>
-        <Checksum dnOrder="2">4AAD8F9C13EE87EED677C858E9122B61</Checksum>
+        <Checksum dnOrder="2">C7C5F12B6B72AE16A19616879948123F</Checksum>
       </Template>
       <Template dnOrder="1">
         <Name dnOrder="0">system_init.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default</Path>
-        <Checksum dnOrder="2">96BBEECA7ABCC237DACFAD2036032A51</Checksum>
+        <Checksum dnOrder="2">43ECDBE881A9FECDDD4F1CF4EF107BF6</Checksum>
       </Template>
       <Template dnOrder="2">
         <Name dnOrder="0">main.c</Name>
@@ -229,54 +229,44 @@
         <Checksum dnOrder="2">54ADBD4A35BCA03C42C74182FCE41849</Checksum>
       </Template>
       <Template dnOrder="6">
-        <Name dnOrder="0">bsp.c</Name>
-        <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default/bsp</Path>
-        <Checksum dnOrder="2">C992DAD48FC06549889A9F6A4A5B7831</Checksum>
-      </Template>
-      <Template dnOrder="7">
         <Name dnOrder="0">app.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app</Path>
       </Template>
-      <Template dnOrder="8">
+      <Template dnOrder="7">
         <Name dnOrder="0">sys_devcon_local.h</Name>
         <Path dnOrder="1">Header&amp;#160;Files/app/system_config/default/framework/system/devcon/src</Path>
         <Checksum dnOrder="2">B66F9B4DBD85DA7F9DE775E864E01395</Checksum>
       </Template>
-      <Template dnOrder="9">
+      <Template dnOrder="8">
         <Name dnOrder="0">sys_devcon.h</Name>
         <Path dnOrder="1">Header&amp;#160;Files/app/system_config/default/framework/system/devcon</Path>
         <Checksum dnOrder="2">07580DCDEF89D9C79B062544109C5367</Checksum>
       </Template>
-      <Template dnOrder="10">
-        <Name dnOrder="0">bsp.h</Name>
-        <Path dnOrder="1">Header&amp;#160;Files/app/system_config/default/bsp</Path>
-        <Checksum dnOrder="2">CBCB2BECABBB2DD38F115CB1115FFF04</Checksum>
-      </Template>
-      <Template dnOrder="11">
+      <Template dnOrder="9">
         <Name dnOrder="0">system_tasks.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default</Path>
         <Checksum dnOrder="2">2EC2B03B54D32D70F57A5C0B92EC31F7</Checksum>
       </Template>
-      <Template dnOrder="12">
+      <Template dnOrder="10">
         <Name dnOrder="0">sys_devcon_pic32mx.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default/framework/system/devcon/src</Path>
         <Checksum dnOrder="2">5141464248E33ABE9E7D144A2D4DC129</Checksum>
       </Template>
-      <Template dnOrder="13">
+      <Template dnOrder="11">
         <Name dnOrder="0">system_config.h</Name>
         <Path dnOrder="1">Header&amp;#160;Files/app/system_config/default</Path>
-        <Checksum dnOrder="2">48D49C37E62708E7B92D43EF29C71217</Checksum>
+        <Checksum dnOrder="2">C4DECD2F0CAD6B423248E2A998684781</Checksum>
       </Template>
-      <Template dnOrder="14">
+      <Template dnOrder="12">
         <Name dnOrder="0">app.h</Name>
         <Path dnOrder="1">Header&amp;#160;Files/app</Path>
       </Template>
-      <Template dnOrder="15">
+      <Template dnOrder="13">
         <Name dnOrder="0">system_interrupt.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default</Path>
         <Checksum dnOrder="2">D06EE7D3DB7E47086177F0950BEA0DAE</Checksum>
       </Template>
-      <Template dnOrder="16">
+      <Template dnOrder="14">
         <Name dnOrder="0">sys_clk_pic32mx.c</Name>
         <Path dnOrder="1">Source&amp;#160;Files/app/system_config/default/framework/system/clk/src</Path>
         <Checksum dnOrder="2">9E1735DC00A06796E5D2C1A7FF8668AC</Checksum>
@@ -289,7 +279,6 @@
         <Include dnOrder="2" value="C:\Users\joshuasrcho\Desktop\Schoolwork\ME433\Homework 10\HW10\firmware\src\default"/>
         <Include dnOrder="3" value="C:\microchip\harmony\v2_06\framework"/>
         <Include dnOrder="4" value="C:\Users\joshuasrcho\Desktop\Schoolwork\ME433\Homework 10\HW10\firmware\src\system_config\default\framework"/>
-        <Include dnOrder="5" value="../src/system_config/default/bsp"/>
       </C32>
     </CompilerItems>
     <Libraries dnOrder="3">
