@@ -428,12 +428,6 @@ void APP_Tasks(void) {
                         /* YOU COULD PUT AN IF STATEMENT HERE TO DETERMINE WHICH LETTER
                         WAS RECEIVED (USUALLY IT IS THE NULL CHARACTER BECAUSE NOTHING WAS
                       TYPED) */
-                if (appData.readBuffer[0] == 'r'){
-                    rstate = true;
-                }
-                else{
-                    rstate = false;
-                }
 
                 if (appData.readTransferHandle == USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID) {
                     appData.state = APP_STATE_ERROR;
@@ -444,6 +438,10 @@ void APP_Tasks(void) {
             break;
 
         case APP_STATE_WAIT_FOR_READ_COMPLETE:
+            if (appData.readBuffer[0] == 'r'){
+                    rstate = true;
+                }
+                    
         case APP_STATE_CHECK_TIMER:
 
             if (APP_StateReset()) {
@@ -454,11 +452,9 @@ void APP_Tasks(void) {
              * The isReadComplete flag gets updated in the CDC event handler. */
 
              /* WAIT FOR 100HZ TO PASS OR UNTIL A LETTER IS RECEIVED */
-            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
+            if (appData.isReadComplete) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
             }
-
-
             break;
 
 
@@ -477,41 +473,44 @@ void APP_Tasks(void) {
             /* PUT THE TEXT YOU WANT TO SEND TO THE COMPUTER IN dataOut
             AND REMEMBER THE NUMBER OF CHARACTERS IN len */
             /* THIS IS WHERE YOU CAN READ YOUR IMU, PRINT TO THE LCD, ETC */
-            
+       
             // actual code
-            unsigned char d[15];
-
-            I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
-            short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
-            short gyroX = (d[2] << 8) | d[3];
-            short gyroY = (d[4] << 8) | d[5];
-            short gyroZ = (d[6] << 8) | d[7];
-            short accelX = (d[8] << 8) | d[9];
-            short accelY = (d[10] << 8) | d[11];
-            short accelZ = (d[12] << 8) | d[13];
-            
-            
-            len = sprintf(dataOut, "%d  %6d  %6d  %6d  %6d  %6d  %6d\r\n",
-                    i,accelX,accelY,accelZ,gyroX,gyroY,gyroZ);
-            i++; // increment the index so we see a change in the text
-            if (i == 100){
-                rstate = false;
+            if (rstate){
                 i = 0;
+                while (i < 100){
+                    unsigned char d[15];
+
+                    I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
+                    short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
+                    short gyroX = (d[2] << 8) | d[3];
+                    short gyroY = (d[4] << 8) | d[5];
+                    short gyroZ = (d[6] << 8) | d[7];
+                    short accelX = (d[8] << 8) | d[9];
+                    short accelY = (d[10] << 8) | d[11];
+                    short accelZ = (d[12] << 8) | d[13];
+
+
+                    len = sprintf(dataOut, "%d  %6d  %6d  %6d  %6d  %6d  %6d\r\n",
+                            i,accelX,accelY,accelZ,gyroX,gyroY,gyroZ);
+                     // increment the index so we see a change in the text
+                    i++;
+
+                    USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+                            &appData.writeTransferHandle, dataOut, len,
+                            USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+                    startTime = _CP0_GET_COUNT(); // reset the timer for accurate delays
+                    while(_CP0_GET_COUNT() - startTime < (48000000 / 2 / 100)){
+                        ;
+                    }
+                }
             }
-            /* IF A LETTER WAS RECEIVED, ECHO IT BACK SO THE USER CAN SEE IT */
-            if (appData.isReadComplete & rstate) {
+            else{ // send NULL character
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle,
-                        appData.readBuffer, 1,
-                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+                            &appData.writeTransferHandle, '\0', 1,
+                            USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
             }
-            /* ELSE SEND THE MESSAGE YOU WANTED TO SEND */
-            else {
-                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle, dataOut, len,
-                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-                startTime = _CP0_GET_COUNT(); // reset the timer for acurate delays
-            }
+            appData.readBuffer[0] = '\0'; // reset buffer to null character
+            rstate = false;
             break;
             
 
