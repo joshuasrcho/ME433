@@ -56,6 +56,19 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "app.h"
 #include <stdio.h>
 #include <xc.h>
+#include "i2c_master_noint.h"
+#include "ili9341.h"
+
+#define LSM6DS33_ADDR 0x6B // device op code
+
+// Function prototypes
+void initIMU(void);
+void I2C_read_multiple(unsigned char addr, unsigned char rgstr, unsigned char * data, int lnt);
+void LCD_writeCharacter(unsigned short x, unsigned short y, char c);
+void LCD_writeString(unsigned short x, unsigned short y, char* m);
+void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY);
+
+
 
 // *****************************************************************************
 // *****************************************************************************
@@ -66,6 +79,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
+bool rstate = false;
 int startTime = 0; // to remember the loop time
 
 // *****************************************************************************
@@ -341,6 +355,13 @@ void APP_Initialize(void) {
     appData.readBuffer = &readBuffer[0];
 
     /* PUT YOUR LCD, IMU, AND PIN INITIALIZATIONS HERE */
+    
+    // setup and initialization
+    i2c_master_setup();                       // initialize I2C2, which we use as a master
+    initIMU();                           // initialize LSM6DS33 IMU chip
+    SPI1_init();
+    LCD_init();
+    LCD_clearScreen(ILI9341_YELLOW);
 
     startTime = _CP0_GET_COUNT();
 }
@@ -407,6 +428,12 @@ void APP_Tasks(void) {
                         /* YOU COULD PUT AN IF STATEMENT HERE TO DETERMINE WHICH LETTER
                         WAS RECEIVED (USUALLY IT IS THE NULL CHARACTER BECAUSE NOTHING WAS
                       TYPED) */
+                if (appData.readBuffer[0] == 'r'){
+                    rstate = true;
+                }
+                else{
+                    rstate = false;
+                }
 
                 if (appData.readTransferHandle == USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID) {
                     appData.state = APP_STATE_ERROR;
@@ -426,7 +453,7 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-             /* WAIT FOR 5HZ TO PASS OR UNTIL A LETTER IS RECEIVED */
+             /* WAIT FOR 100HZ TO PASS OR UNTIL A LETTER IS RECEIVED */
             if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
             }
@@ -450,10 +477,29 @@ void APP_Tasks(void) {
             /* PUT THE TEXT YOU WANT TO SEND TO THE COMPUTER IN dataOut
             AND REMEMBER THE NUMBER OF CHARACTERS IN len */
             /* THIS IS WHERE YOU CAN READ YOUR IMU, PRINT TO THE LCD, ETC */
-            len = sprintf(dataOut, "%d\r\n", i);
+            
+            // actual code
+            unsigned char d[15];
+
+            I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
+            short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
+            short gyroX = (d[2] << 8) | d[3];
+            short gyroY = (d[4] << 8) | d[5];
+            short gyroZ = (d[6] << 8) | d[7];
+            short accelX = (d[8] << 8) | d[9];
+            short accelY = (d[10] << 8) | d[11];
+            short accelZ = (d[12] << 8) | d[13];
+            
+            
+            len = sprintf(dataOut, "%d  %6d  %6d  %6d  %6d  %6d  %6d\r\n",
+                    i,accelX,accelY,accelZ,gyroX,gyroY,gyroZ);
             i++; // increment the index so we see a change in the text
+            if (i == 100){
+                rstate = false;
+                i = 0;
+            }
             /* IF A LETTER WAS RECEIVED, ECHO IT BACK SO THE USER CAN SEE IT */
-            if (appData.isReadComplete) {
+            if (appData.isReadComplete & rstate) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
                         appData.readBuffer, 1,
@@ -467,6 +513,7 @@ void APP_Tasks(void) {
                 startTime = _CP0_GET_COUNT(); // reset the timer for acurate delays
             }
             break;
+            
 
         case APP_STATE_WAIT_FOR_WRITE_COMPLETE:
 
@@ -491,6 +538,103 @@ void APP_Tasks(void) {
 }
 
 
+void initIMU(){
+    i2c_master_start();
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x10); // write to CTRL1_XL register
+    i2c_master_send(0x82); // 1.66kHz sample rate, 2g sensitivity, 100Hz filter
+    i2c_master_restart();
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x11); // write to CTRL2_G register
+    i2c_master_send(0x88); // 1.66kHz sample rate, 1000 dps sensitivity
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x12); // write to CTRL3_C register
+    i2c_master_send(0x4); // turn on IF_INC
+    i2c_master_stop();
+    
+}
+
+void I2C_read_multiple(unsigned char addr, unsigned char rgstr, unsigned char * data, int lnt){
+    int i;
+    i2c_master_start();
+    i2c_master_send(addr << 1); // write
+    i2c_master_send(rgstr); // send address of the first register to read from
+    i2c_master_restart();
+    i2c_master_send((addr << 1) | 1); // read
+    
+    for (i = 0; i<lnt; i++){
+        data[i] = i2c_master_recv();
+        if (i == (lnt-1)){
+            i2c_master_ack(1);
+        }
+        else{
+            i2c_master_ack(0);
+        }
+    }
+    i2c_master_stop(); 
+}
+
+void LCD_writeCharacter(unsigned short x, unsigned short y, char c){
+    int i, j;
+    if (x <= 235 && y <= 315){
+        for (i=0; i<5; i++){
+            for (j=0; j<8; j++){
+                char t = ASCII[c-32][i] >> (7-j);
+                t = t & 0x1;
+                if (t){
+                    LCD_drawPixel(x+i,y-j,ILI9341_PURPLE);
+                }
+                else{
+                    LCD_drawPixel(x+i,y-j,ILI9341_YELLOW );
+                }
+            }
+        }    
+    }
+    else{;}
+}
+
+void LCD_writeString(unsigned short x, unsigned short y, char* m){
+    int i = 0; 
+    while(m[i]){ 
+        LCD_writeCharacter(x+6*i, y, m[i]); 
+        i++;
+    }
+}
+
+void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY){
+    int i, j;
+    // X direction
+    for (i = 0; i < 100; i++){
+        for (j = 0; j < 5; j++){
+            if (i < (accelX/100)){
+               LCD_drawPixel(x+i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+i,y+j,ILI9341_LIGHTGREY);
+            }
+            if (-i > (accelX/100)){
+                LCD_drawPixel(x-i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x-i,y+j,ILI9341_LIGHTGREY);
+            }
+            // Y direction
+            if (i < (accelY/100)){
+               LCD_drawPixel(x+j,y+i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y+i,ILI9341_LIGHTGREY);
+            }
+            if (-i >= (accelY/100)){
+                LCD_drawPixel(x+j,y-i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y-i,ILI9341_LIGHTGREY);
+            }
+        }
+    }
+  
+}
 
 /*******************************************************************************
  End of File
