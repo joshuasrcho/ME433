@@ -60,6 +60,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "ili9341.h"
 
 #define LSM6DS33_ADDR 0x6B // device op code
+#define MAF_SAMPLE_SIZE 5
+#define FIR_SAMPLE_SIZE 5
 
 // Function prototypes
 void initIMU(void);
@@ -477,21 +479,51 @@ void APP_Tasks(void) {
             // actual code
             if (rstate){
                 i = 0;
+                short mafz_buffer[MAF_SAMPLE_SIZE] = {0};
+                double firz_buffer[FIR_SAMPLE_SIZE] = {0};
+                double fir_wt[FIR_SAMPLE_SIZE] = {0.0201, 0.2309, 0.4981, 0.2309, 0.0201};
+                double iirz_prev_avg = 0;
+                double iirz_avg;
+                int ii;
                 while (i < 100){
                     unsigned char d[15];
 
                     I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
+                    /*
                     short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
                     short gyroX = (d[2] << 8) | d[3];
                     short gyroY = (d[4] << 8) | d[5];
                     short gyroZ = (d[6] << 8) | d[7];
                     short accelX = (d[8] << 8) | d[9];
                     short accelY = (d[10] << 8) | d[11];
+                     */
                     short accelZ = (d[12] << 8) | d[13];
+                    
+                    // MAF processing
+                    double mafz_avg = 0;
+                    mafz_buffer[i%MAF_SAMPLE_SIZE] = accelZ;
+                    for (ii = 0; ii < MAF_SAMPLE_SIZE; ii++){ 
+                        mafz_avg += mafz_buffer[ii];
+                    }
+                    mafz_avg /= MAF_SAMPLE_SIZE;
+                    
+                    // IIR processing
+                    // new_average = A * previous_value + B * new_value, where A + B = 1
+                    // A = 0.8, B = 0.2
+                    iirz_avg = 0.8*iirz_prev_avg + 0.2*accelZ; 
+                    iirz_prev_avg = iirz_avg;
+                    
+                    // FIR processing
+                    double firz_avg = 0;
+                    firz_buffer[i%FIR_SAMPLE_SIZE] = accelZ * fir_wt[i%FIR_SAMPLE_SIZE];
+                    for (ii = 0; ii < FIR_SAMPLE_SIZE; ii++){ 
+                        firz_avg += firz_buffer[ii];
+                    }
 
 
-                    len = sprintf(dataOut, "%d  %6d  %6d  %6d  %6d  %6d  %6d\r\n",
-                            i,accelX,accelY,accelZ,gyroX,gyroY,gyroZ);
+
+                    len = sprintf(dataOut, "%d %6d %6f %6f %6f\r\n",
+                            i,accelZ,mafz_avg,iirz_avg,firz_avg);
                      // increment the index so we see a change in the text
                     i++;
 
