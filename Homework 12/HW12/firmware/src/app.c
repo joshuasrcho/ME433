@@ -54,6 +54,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "app.h"
+#include "mouse.h"
+#include "i2c_master_noint.h"
+#include "ili9341.h"
+#include <stdio.h>
 
 
 // *****************************************************************************
@@ -83,12 +87,20 @@ APP_DATA appData;
 MOUSE_REPORT mouseReport APP_MAKE_BUFFER_DMA_READY;
 MOUSE_REPORT mouseReportPrevious APP_MAKE_BUFFER_DMA_READY;
 
+#define LSM6DS33_ADDR 0x6B // device op code
 
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Functions
 // *****************************************************************************
 // *****************************************************************************
+void initIMU(void);
+void I2C_read_multiple(unsigned char addr, unsigned char rgstr, unsigned char * data, int lnt);
+void LCD_writeCharacter(unsigned short x, unsigned short y, char c);
+void LCD_writeString(unsigned short x, unsigned short y, char* m);
+void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY);
+
+
 
 void APP_USBDeviceHIDEventHandler(USB_DEVICE_HID_INDEX hidInstance,
         USB_DEVICE_HID_EVENT event, void * eventData, uintptr_t userData) {
@@ -268,6 +280,12 @@ void APP_Initialize(void) {
     //appData.emulateMouse = true;
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
+    
+    i2c_master_setup();                       // initialize I2C2, which we use as a master
+    initIMU();                           // initialize LSM6DS33 IMU chip
+    SPI1_init();
+    LCD_init();
+    LCD_clearScreen(ILI9341_YELLOW);
 }
 
 /******************************************************************************
@@ -279,10 +297,7 @@ void APP_Initialize(void) {
  */
 
 void APP_Tasks(void) {
-    static int8_t vector = 0;
-    static uint8_t movement_length = 0;
-    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
-
+    static uint8_t inc = 0;
     /* Check the application's current state. */
     switch (appData.state) {
             /* Application's initial state. */
@@ -317,16 +332,40 @@ void APP_Tasks(void) {
             break;
 
         case APP_STATE_MOUSE_EMULATE:
-            
+            ;
             // every 50th loop, or 20 times per second
-            if (movement_length > 50) {
-                appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.xCoordinate = (int8_t) dir_table[vector & 0x07];
-                appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
-                vector++;
-                movement_length = 0;
+            unsigned char d[15];
+            char message[100];
+            I2C_read_multiple(LSM6DS33_ADDR, 0x20, d, 14);
+            /*
+            short temperature = (d[0] << 8) | d[1]; // shift high byte and OR with low byte 
+            short gyroX = (d[2] << 8) | d[3];
+            short gyroY = (d[4] << 8) | d[5];
+            short gyroZ = (d[6] << 8) | d[7];
+            short accelZ = (d[12] << 8) | d[13];
+            */
+            short accelX = (d[8] << 8) | d[9];
+            short accelY = (d[10] << 8) | d[11];
+            
+            sprintf(message,"accelX:%6d",accelX/200);
+            LCD_writeString(20,20,message);
+            sprintf(message,"accelY:%6d",accelY/200);
+            LCD_writeString(20,40,message);
+            
+            appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
+            appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
+            if (inc%3 == 0){
+                appData.xCoordinate = (int8_t) (accelX/200);
+                appData.yCoordinate = (int8_t) (accelY/200);
             }
+            else{
+                appData.xCoordinate = (int8_t) 0;
+                appData.yCoordinate = (int8_t) 0;
+            }
+            inc++;
+            
+            
+            
 
             if (!appData.isMouseReportSendBusy) {
                 /* This means we can send the mouse report. The
@@ -378,7 +417,6 @@ void APP_Tasks(void) {
                             sizeof (MOUSE_REPORT));
                     appData.setIdleTimer = 0;
                 }
-                movement_length++;
             }
 
             break;
@@ -396,7 +434,103 @@ void APP_Tasks(void) {
     }
 }
 
+void initIMU(){
+    i2c_master_start();
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x10); // write to CTRL1_XL register
+    i2c_master_send(0x82); // 1.66kHz sample rate, 2g sensitivity, 100Hz filter
+    i2c_master_restart();
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x11); // write to CTRL2_G register
+    i2c_master_send(0x88); // 1.66kHz sample rate, 1000 dps sensitivity
+    i2c_master_send(LSM6DS33_ADDR << 1);
+    i2c_master_send(0x12); // write to CTRL3_C register
+    i2c_master_send(0x4); // turn on IF_INC
+    i2c_master_stop();
+    
+}
 
+void I2C_read_multiple(unsigned char addr, unsigned char rgstr, unsigned char * data, int lnt){
+    int i;
+    i2c_master_start();
+    i2c_master_send(addr << 1); // write
+    i2c_master_send(rgstr); // send address of the first register to read from
+    i2c_master_restart();
+    i2c_master_send((addr << 1) | 1); // read
+    
+    for (i = 0; i<lnt; i++){
+        data[i] = i2c_master_recv();
+        if (i == (lnt-1)){
+            i2c_master_ack(1);
+        }
+        else{
+            i2c_master_ack(0);
+        }
+    }
+    i2c_master_stop(); 
+}
+
+void LCD_writeCharacter(unsigned short x, unsigned short y, char c){
+    int i, j;
+    if (x <= 235 && y <= 315){
+        for (i=0; i<5; i++){
+            for (j=0; j<8; j++){
+                char t = ASCII[c-32][i] >> (7-j);
+                t = t & 0x1;
+                if (t){
+                    LCD_drawPixel(x+i,y-j,ILI9341_PURPLE);
+                }
+                else{
+                    LCD_drawPixel(x+i,y-j,ILI9341_YELLOW );
+                }
+            }
+        }    
+    }
+    else{;}
+}
+
+void LCD_writeString(unsigned short x, unsigned short y, char* m){
+    int i = 0; 
+    while(m[i]){ 
+        LCD_writeCharacter(x+6*i, y, m[i]); 
+        i++;
+    }
+}
+
+void LCD_IMUBar(unsigned short x, unsigned short y, int accelX, int accelY){
+    int i, j;
+    // X direction
+    for (i = 0; i < 100; i++){
+        for (j = 0; j < 5; j++){
+            if (i < (accelX/100)){
+               LCD_drawPixel(x+i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+i,y+j,ILI9341_LIGHTGREY);
+            }
+            if (-i > (accelX/100)){
+                LCD_drawPixel(x-i,y+j,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x-i,y+j,ILI9341_LIGHTGREY);
+            }
+            // Y direction
+            if (i < (accelY/100)){
+               LCD_drawPixel(x+j,y+i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y+i,ILI9341_LIGHTGREY);
+            }
+            if (-i >= (accelY/100)){
+                LCD_drawPixel(x+j,y-i,ILI9341_RED); 
+            }
+            else{
+                LCD_drawPixel(x+j,y-i,ILI9341_LIGHTGREY);
+            }
+        }
+    }
+  
+}
 /*******************************************************************************
  End of File
  */
