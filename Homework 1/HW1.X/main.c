@@ -55,8 +55,8 @@ int main() {
 
     // do your TRIS and LAT commands here
     TRISBbits.TRISB4 = 1; // B4 (pushbutton) is an input pin
-    TRISAbits.TRISA4 = 0; // A4 (green LED) is an output pin
-    LATAbits.LATA4 = 1; // A4 is HIGH (green LED on)
+    TRISAbits.TRISA10 = 0; // A4 (green LED) is an output pin
+    LATAbits.LATA10 = 1; // A4 is HIGH (green LED on)
 
     __builtin_enable_interrupts();
 
@@ -67,9 +67,9 @@ int main() {
         while(_CP0_GET_COUNT() <= 12000){
             ; // delay for 0.5 milliseconds. Core timer runs at 24 MHz.
         }
-        LATAbits.LATA4 = !LATAbits.LATA4; // toggle green LED
+        LATAbits.LATA10 = !LATAbits.LATA10; // toggle green LED
         while (!(PORTBbits.RB4)){
-            LATAbits.LATA4 = 0; // turn off green LED while button is pressed
+            LATAbits.LATA10 = 0; // turn off green LED while button is pressed
         }
     }
 }
