@@ -54,7 +54,8 @@ void __ISR(_TIMER_3_VECTOR, IPL5SOFT) Timer3ISR(void) {
         OC1RS = 0;
         LATAbits.LATA10 = !LATAbits.LATA10;
     }
-    OC1RS = OC1RS + ((PR2+1)/100);
+    //OC1RS = OC1RS + ((PR2+1)/100);
+    OC1RS = 2399;
     IFS0bits.T3IF = 0;
 
 }
@@ -78,7 +79,7 @@ int main() {
     TRISAbits.TRISA10 = 0; // A4 (green LED) is an output pin
     LATAbits.LATA10 = 0; // A4 is LOW (green LED off)
     
-    RPA0Rbits.RPA0R = 0b0101; // A0 is OC1 pin
+    RPB15Rbits.RPB15R = 0b0101; // A0 is OC1 pin
     T2CONbits.TCKPS = 0; // Timer2 prescaler N=1 (1:1)
     PR2 = 2399; // PR = PBCLK / N / desiredF - 1 (20kHz)
     TMR2 = 0; // initial TMR2 count is 0
