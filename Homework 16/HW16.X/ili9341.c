@@ -185,10 +185,12 @@ void LCD_init() {
 }
 
 void SPI1_init() {
-  SDI1Rbits.SDI1R = 0b0100; // B8 is SDI1
+  //SDI1Rbits.SDI1R = 0b0000; // A0 is supposed to be SDI1 but that's not an option, oops
   RPA1Rbits.RPA1R = 0b0011; // A1 is SDO1
   TRISBbits.TRISB7 = 0; // CS is B7
   CS = 1; // CS starts high
+  TRISBbits.TRISB5 = 0; // CST is B5
+  CST = 1; // CS starts high
 
   // DC pin
   TRISAbits.TRISA9 = 0;
@@ -196,7 +198,7 @@ void SPI1_init() {
   
   SPI1CON = 0; // turn off the spi module and reset it
   SPI1BUF; // clear the rx buffer by reading from it
-  SPI1BRG = 0x1; // baud rate to 12 MHz [SPI1BRG = (48000000/(2*desired))-1]
+  SPI1BRG = 3; // baud rate to 12 MHz [SPI1BRG = (48000000/(2*desired))-1]
   SPI1STATbits.SPIROV = 0; // clear the overflow bit
   SPI1CONbits.CKE = 1; // data changes when clock goes from hi to lo (since CKP is 0)
   SPI1CONbits.MSTEN = 1; // master operation
@@ -260,4 +262,68 @@ void LCD_clearScreen(unsigned short color) {
 	}
     
     CS = 1; // CS
+}
+
+void XPT2046_read(int *z, unsigned short *x, unsigned short *y){
+    unsigned short z1, z2;
+    
+    unsigned char r1, r2;
+    unsigned short t1, t2;
+    
+    CST = 0;
+    spi_io(0b10110001); // Z1
+    r1 = spi_io(0x00);
+    r2 = spi_io(0x00);
+    CST = 1;
+    z1 = ((r1<<8)|r2)>>3;
+    
+    CST = 0;
+    spi_io(0b11000001); // Z2
+    r1 = spi_io(0x00);
+    r2 = spi_io(0x00);
+    CST = 1;
+    z2 = ((r1<<8)|r2)>>3;
+    
+    CST = 0;
+    spi_io(0b10010001); // Y
+    r1 = spi_io(0x00);
+    r2 = spi_io(0x00);
+    CST = 1;
+    t1 = ((r1<<8)|r2)>>3;
+    
+    CST = 0;
+    spi_io(0b11010001); // X
+    r1 = spi_io(0x00);
+    r2 = spi_io(0x00);
+    CST = 1;
+    t2 = ((r1<<8)|r2)>>3;
+    
+    
+    *z = z1 - z2 + 4095;
+    *y = t1;
+    *x = t2;
+    
+}
+
+void drawChar(unsigned short x,unsigned short y, char c){
+    int i = 0;
+    int j = 0;
+    for(i=0;i<5;i++){
+        for(j=0;j<8;j++){
+            if((ASCII[c-0x20][i]>>j)&1==1){
+                LCD_drawPixel(x+i,y+j,ILI9341_WHITE);
+            }
+            else{
+                LCD_drawPixel(x+i,y+j,ILI9341_BLACK);
+            }
+        }
+    }
+}
+
+void drawString(unsigned short x,unsigned short y, char * a){
+    int i=0;
+    while(a[i]){
+        drawChar(x+i*5,y,a[i]);
+        i++;
+    }
 }

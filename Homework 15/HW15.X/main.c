@@ -76,10 +76,10 @@ int main() {
     DDPCONbits.JTAGEN = 0;
     
     TRISBbits.TRISB4 = 1; // B4 (pushbutton) is an input pin
-    TRISAbits.TRISA10 = 0; // A4 (green LED) is an output pin
-    LATAbits.LATA10 = 0; // A4 is LOW (green LED off)
+    TRISAbits.TRISA4 = 0; // A4 (green LED) is an output pin
+    LATAbits.LATA4 = 0; // A4 is LOW (green LED off)
     
-    RPB15Rbits.RPB15R = 0b0101; // A0 is OC1 pin
+    RPA0Rbits.RPA0R = 0b0101; // A0 is OC1 pin
     T2CONbits.TCKPS = 0; // Timer2 prescaler N=1 (1:1)
     PR2 = 2399; // PR = PBCLK / N / desiredF - 1 (20kHz)
     TMR2 = 0; // initial TMR2 count is 0

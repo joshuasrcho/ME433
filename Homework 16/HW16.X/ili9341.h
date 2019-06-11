@@ -88,7 +88,7 @@ static const char ASCII[96][5] = {
 ,{0x07, 0x08, 0x70, 0x08, 0x07} // 59 Y
 ,{0x61, 0x51, 0x49, 0x45, 0x43} // 5a Z
 ,{0x00, 0x7f, 0x41, 0x41, 0x00} // 5b [
-,{0x02, 0x04, 0x08, 0x10, 0x20} // 5c ¥
+,{0x02, 0x04, 0x08, 0x10, 0x20} // 5c ?
 ,{0x00, 0x41, 0x41, 0x7f, 0x00} // 5d ]
 ,{0x04, 0x02, 0x01, 0x02, 0x04} // 5e ^
 ,{0x40, 0x40, 0x40, 0x40, 0x40} // 5f _
@@ -196,6 +196,7 @@ static const char ASCII[96][5] = {
 // spi pins
 #define CS LATBbits.LATB7
 #define DC LATAbits.LATA9
+#define CST LATBbits.LATB5
 
 // functions
 void LCD_init();
@@ -207,5 +208,10 @@ void LCD_data16(unsigned short dat);
 void LCD_setAddr(unsigned short x, unsigned short y, unsigned short w, unsigned short h);
 void LCD_drawPixel(unsigned short x, unsigned short y, unsigned short color);
 void LCD_clearScreen(unsigned short color);
+
+void XPT2046_read(int *z, unsigned short *x, unsigned short *y);
+
+void drawChar(unsigned short x,unsigned short y, char c);
+void drawString(unsigned short x,unsigned short y, char * a);
 
 #endif
