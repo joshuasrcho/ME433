@@ -28,7 +28,6 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Timer5ISR(void) {
     }
     interruptCounter++;
     IFS0bits.T5IF = 0; // clear interrupt flag
-
 }
 
 void startup() {
@@ -83,23 +82,8 @@ void startup() {
     i2c_master_setup();
     ov7670_setup();
     
+    
     // B3 is available as SCL2, B2 is available as SDA2
-    
-    // Tried controlling servo using PWM but didn't work
-    /* 
-    RPB2Rbits.RPB2R = 0b0110; // I will use B2 for OC5 to drive the servo
-    T3CONbits.TCKPS = 0b110; // Timer3 prescaler N=64 (1:1)
-    PR3 = 14999; // PR = PBCLK / N / desiredF - 1 (50Hz)
-    TMR3 = 0; // initial TMR3 count is 0
-    OC5CONbits.OCTSEL = 1; // OC5 uses Timer3
-    OC5CONbits.OCM = 0b110; // PWM mode without fault pin;
-    OC5RS = 1500; // duty cycle
-    OC5R = 1500; // initialize before turning OC1 on; afterward it is read-only
-    T3CONbits.ON = 1; // turn on Timer3
-    OC5CONbits.ON = 1; // turn on OC5
-     */
-    
-    
     TRISBbits.TRISB2 = 0; // B2 is a digital output
     SERVO = 1;
     T5CONbits.TCKPS = 5; // Timer5 prescaler = 32
@@ -109,8 +93,8 @@ void startup() {
     IPC5bits.T5IP = 5; // interrupt priority 5
     IPC5bits.T5IS = 0; // interrupt subpriority 0
     IFS0bits.T5IF = 0; // clear interrupt flag
-    IEC0bits.T5IE = 1; // enable interrupt
-     
+    //IEC0bits.T5IE = 1; // enable interrupt
+    
 }
 
 int main() {
@@ -125,7 +109,7 @@ int main() {
     char message[100];
     
     while(1) {
-        
+        /*
         _CP0_SET_COUNT(0);
         while(_CP0_GET_COUNT()<48000000*2){
             while(USER == 0){}
@@ -143,7 +127,7 @@ int main() {
         headTurn = RIGHT;
         DIR1 = 1;
         DIR2 = 0;
-        
+        */
         
         I++;
         sprintf(message,"I = %d   ", I);
@@ -151,41 +135,50 @@ int main() {
         
         unsigned char d[2000];
         
-        int c = ov7670_count(d);
+ 
+         // vertical read
+        int c = ov7670_count_vert(d);
         sprintf(message, "c = %d   ",c);
         drawString(140,92,message); // there are 290 rows
-        /*
-        int i = 0;
-        int t = 0;
-        for (i=0;i<30;i++){
-            sprintf(message, "%d    %d    %d    %d  ",d[t],d[t+1],d[t+2],d[t+3]);
-            t=t+4;
-            drawString(1,1+i*10,message);
-        }
-         */
         
-        int x = 0, x2 = 1;
+        int error = 0;
+        int target_edge = c/4;
+        int curr_edge = 0;
+        int prev_y = 0;
+        
+        int x = 0, x2 = 0;
         int y = 0;
         int dim = 0;
         for(x = 0; x < c/2; x++, x2=x2+2){
             dim = d[x2]>>3;
+            if (x%15 == 0){
+                prev_y = dim;
+                sprintf(message, "%2d",prev_y);
+                drawString(x,65,message);
+            }
+            if ((dim - prev_y) > 6){
+                        curr_edge = x;
+                    }
             for(y=0;y<32;y++){
                 if (y == dim){
-                    LCD_drawPixel(y+30,x,ILI9341_BLACK);
+                    
+                    LCD_drawPixel(x,y+30,ILI9341_BLACK);
                 }
                 else {
-                    LCD_drawPixel(y+30,x,ILI9341_WHITE);
+                    LCD_drawPixel(x,y+30,ILI9341_WHITE);
                 }
             }
         }
         
-        /*
-        for(x = c/2; x < 310; x++){
-            for(y=0;y<32;y++){
-                LCD_drawPixel(y+30,x,ILI9341_WHITE);
-            }
-        }
-         * */
+        // at this point, every other index of d[] is a brightness
+        // loop through d[] and calculate where the middle of the dip or bump is
+        // then set the motor speed and direction to follow the line
+
+                
+        sprintf(message, "AE = %d, CE = %3d",target_edge,curr_edge);
+        drawString(140,200,message);
+        
+        error = curr_edge - target_edge;
          
     }
 }

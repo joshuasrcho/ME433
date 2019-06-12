@@ -16,7 +16,10 @@ char outputBuffer[WIDTH * HEIGHT * BYTES_PER_PIXEL];
 
 void ov7670_setup();
 
-int ov7670_count(unsigned char * d);
+int ov7670_count_horz(unsigned char * d);
+int ov7670_count_vert(unsigned char * d);
+
+void writeCameraRegister(unsigned char reg, unsigned char val);
 
 
 
