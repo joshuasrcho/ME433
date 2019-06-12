@@ -6,11 +6,11 @@ void ov7670_setup(){
     T2CONbits.TCKPS = 0; // Timer2 prescaler N=1 (1:1)
     PR2 = 2; // PR = PBCLK / N / desiredF - 1
     TMR2 = 0; // initial TMR2 count is 0
-    OC2CONbits.OCM = 0b110; // PWM mode without fault pin; other OC1CON bits are defaults
+    OC2CONbits.OCM = 0b110; // PWM mode without fault pin; other OC2CON bits are defaults
     OC2RS = 1; // duty cycle = 50%
     OC2R = 1; // initialize before turning on; afterward it is read-only
     T2CONbits.ON = 1; // turn on Timer2
-    OC2CONbits.ON = 1; // turn on OC1
+    OC2CONbits.ON = 1; // turn on OC2
     
     // set camera to QCIF format
     unsigned char val = 0;

@@ -9,6 +9,27 @@
 #define DIR1 LATAbits.LATA10
 #define DIR2 LATAbits.LATA7
 #define USER PORTBbits.RB4
+#define SERVO LATBbits.LATB2
+#define LEFT 2;
+#define RIGHT 6;
+
+volatile int interruptCounter = 0;
+volatile int headTurn = 0;
+
+void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Timer5ISR(void) {
+    if (interruptCounter < headTurn){ // 2 to 6
+        SERVO = 1;
+    }
+    else{
+        SERVO = 0;
+        if (interruptCounter == 40){
+            interruptCounter = 0;
+        }
+    }
+    interruptCounter++;
+    IFS0bits.T5IF = 0; // clear interrupt flag
+
+}
 
 void startup() {
     // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
@@ -33,25 +54,24 @@ void startup() {
     TRISBbits.TRISB4 = 1; // USER
     
     
-    // LEFT MOTOR OC1 SETUP
+    // RIGHT MOTOR OC1 SETUP
     RPB15Rbits.RPB15R = 0b0101; // OC1 is B15, goes with DIR1
-    T2CONbits.TCKPS = 0; // Timer2 prescaler N=1 (1:1)
-    PR2 = 2399; // PR = PBCLK / N / desiredF - 1 (20kHz)
-    TMR2 = 0; // initial TMR2 count is 0
-    OC1CONbits.OCM = 0b110; // PWM mode without fault pin; other OC1CON bits are defaults
-    OC1RS = 1200; // duty cycle
+    T3CONbits.TCKPS = 0; // Timer3 prescaler N=1 (1:1)
+    PR3 = 2399; // PR = PBCLK / N / desiredF - 1 (20kHz)
+    TMR3 = 0; // initial TMR3 count is 0
+    OC1CONbits.OCM = 0b110; // PWM mode without fault pin
+    OC1CONbits.OCTSEL = 1; // use timer3
     OC1R = 0; // initialize before turning OC1 on; afterward it is read-only
-    T2CONbits.ON = 1; // turn on Timer2
+    T3CONbits.ON = 1; // turn on Timer3
     OC1CONbits.ON = 1; // turn on OC1
     
-    
-    // RIGHT MOTOR OC4 SETUP
+    // LEFT MOTOR OC4 SETUP
     RPA4Rbits.RPA4R = 0b0101; // OC4 is A4, goes with DIR2
-    OC4CONbits.OCM = 0b110; // PWM mode without fault pin; other OC1CON bits are defaults
-    OC4RS = 1200; // duty cycle
-    OC4R = 0; // initialize before turning OC1 on; afterward it is read-only
-    OC4CONbits.ON = 1; // turn on OC1
-    
+    OC4CONbits.OCM = 0b110; // PWM mode without fault pin
+    OC4CONbits.OCTSEL = 1; // Use timer3
+    OC4R = 0; // initialize before turning OC4 on; afterward it is read-only
+    OC4CONbits.ON = 1; // turn on OC4
+   
     
     // LCD uses SPI1: A0 is SDO, A1 is SDI, B5 is CST, B14 is SCK1, A9 is DC, B7 is CS
     SPI1_init();
@@ -64,9 +84,12 @@ void startup() {
     ov7670_setup();
     
     // B3 is available as SCL2, B2 is available as SDA2
+    
+    // Tried controlling servo using PWM but didn't work
+    /* 
     RPB2Rbits.RPB2R = 0b0110; // I will use B2 for OC5 to drive the servo
     T3CONbits.TCKPS = 0b110; // Timer3 prescaler N=64 (1:1)
-    PR5 = 15000; // PR = PBCLK / N / desiredF - 1 (50Hz)
+    PR3 = 14999; // PR = PBCLK / N / desiredF - 1 (50Hz)
     TMR3 = 0; // initial TMR3 count is 0
     OC5CONbits.OCTSEL = 1; // OC5 uses Timer3
     OC5CONbits.OCM = 0b110; // PWM mode without fault pin;
@@ -74,8 +97,20 @@ void startup() {
     OC5R = 1500; // initialize before turning OC1 on; afterward it is read-only
     T3CONbits.ON = 1; // turn on Timer3
     OC5CONbits.ON = 1; // turn on OC5
+     */
     
-
+    
+    TRISBbits.TRISB2 = 0; // B2 is a digital output
+    SERVO = 1;
+    T5CONbits.TCKPS = 5; // Timer5 prescaler = 32
+    PR5 = 749; // PR = PBCLK / N / desiredF - 1 (2000Hz)
+    TMR5 = 0; // initial TMR5 count is 0
+    T5CONbits.ON = 1; // turn on Timer5
+    IPC5bits.T5IP = 5; // interrupt priority 5
+    IPC5bits.T5IS = 0; // interrupt subpriority 0
+    IFS0bits.T5IF = 0; // clear interrupt flag
+    IEC0bits.T5IE = 1; // enable interrupt
+     
 }
 
 int main() {
@@ -89,31 +124,35 @@ int main() {
     int I = 0;
     char message[100];
     
-       
     while(1) {
+        
 
         _CP0_SET_COUNT(0);
-        while(_CP0_GET_COUNT()<48000000/2/2){
+        while(_CP0_GET_COUNT()<48000000*2){
             while(USER == 0){}
         }
+        headTurn = LEFT;
         DIR1 = 0;
         DIR2 = 1;
+        OC1RS = 1200; // set PWM duty cycle for right motor
+        OC4RS = 1200; // set PWM duty cycle for left motor
         
         _CP0_SET_COUNT(0);
-        while(_CP0_GET_COUNT()<48000000/2/2){
+        while(_CP0_GET_COUNT()<48000000*2){
             while(USER == 0){}
         }
+        headTurn = RIGHT;
         DIR1 = 1;
         DIR2 = 0;
-        
-        //I++;
-        //sprintf(message,"I = %d   ", I);
-        //drawString(140,92,message);
-        
+        /*
+        I++;
+        sprintf(message,"I = %d   ", I);
+        drawString(160,92,message);
+        */
         unsigned char d[2000];
-        
+       
         int c = ov7670_count(d);
-        sprintf(message, "c = %d   ",c);
+        sprintf(message, "c = %d  ",c);
         drawString(140,92,message); // there are 290 rows
         /*
         int i = 0;
@@ -123,7 +162,7 @@ int main() {
             t=t+4;
             drawString(1,1+i*10,message);
         }
-         * */
+        */ 
         
         int x = 0, x2 = 1;
         int y = 0;
@@ -139,5 +178,6 @@ int main() {
                 }
             }
         }
+        
     }
 }
