@@ -4,61 +4,44 @@ void ov7670_setup(){
     // set C8 to OC2 at 12MHz using Timer2
     RPC8Rbits.RPC8R = 0b0101; // C8 is OC2
     T2CONbits.TCKPS = 0; // Timer2 prescaler N=1 (1:1)
-    PR2 = 2; // PR = PBCLK / N / desiredF - 1
+    PR2 = 3; // PR = PBCLK / N / desiredF - 1
     TMR2 = 0; // initial TMR2 count is 0
-    OC2CONbits.OCM = 0b110; // PWM mode without fault pin; other OC2CON bits are defaults
+    OC2CONbits.OCM = 0b110; // PWM mode without fault pin; other OC1CON bits are defaults
     OC2RS = 1; // duty cycle = 50%
     OC2R = 1; // initialize before turning on; afterward it is read-only
     T2CONbits.ON = 1; // turn on Timer2
-    OC2CONbits.ON = 1; // turn on OC2
+    OC2CONbits.ON = 1; // turn on OC1
     
     // set camera to QCIF format
     unsigned char val = 0;
+    /*
+    // set 0x0C to 0b00001000
+    i2c_master_start();
+    i2c_master_send(OV7670_SCCB_ADDRESS<<1);
+    i2c_master_send(0x0C);
+    i2c_master_send(0b00001000); // enable scaling
+    i2c_master_stop();
     
-    // read from 0x0C
-    /*
-    i2c_master_start();
-    i2c_master_send(OV7670_SCCB_ADDRESS<<1);
-    i2c_master_send(0x0C);
-    i2c_master_restart();
-    i2c_master_send(OV7670_SCCB_ADDRESS<<1|1);
-    val = i2c_master_recv();
-    i2c_master_ack(1);
-    i2c_master_stop();
-     * */
-    /*
-    // set 0x0C to val|0b00001000
-    i2c_master_start();
-    i2c_master_send(OV7670_SCCB_ADDRESS<<1);
-    i2c_master_send(0x0C);
-    i2c_master_send(val|0b00001000);
-    i2c_master_stop();
-     * */
-    /*
-    // read from 0x12
+    // set 0x12 to 0b1000
     i2c_master_start();
     i2c_master_send(OV7670_SCCB_ADDRESS<<1);
     i2c_master_send(0x12);
-    i2c_master_restart();
-    i2c_master_send(OV7670_SCCB_ADDRESS<<1|1);
-    val = i2c_master_recv();
-    i2c_master_ack(1);
+    i2c_master_send(0b0001000); // //set to qcif 176x144
     i2c_master_stop();
-    */
-    /*
-    // set 0x12 to (val&0b11000111)|0b00001000
-    i2c_master_start();
-    i2c_master_send(OV7670_SCCB_ADDRESS<<1);
-    i2c_master_send(0x12);
-    i2c_master_send((val&0b11000111)|0b00001000);
-    i2c_master_stop();
-     * */
+    
+    
+    //i2c_master_start();
+    //i2c_master_send(OV7670_SCCB_ADDRESS<<1);
+    //i2c_master_send(0x3E);
+    //i2c_master_send(0b00011100); 
+    //i2c_master_stop();
+     */
     
     writeCameraRegister(0x12, 0x80); // reset all camera registers to default value
  _CP0_SET_COUNT(0);
  while(_CP0_GET_COUNT()<48000000/2){}
   writeCameraRegister(0x3A, 0x04);
-  writeCameraRegister(0x12, 0x00);
+  writeCameraRegister(0x12, 0x08); // was 00
   writeCameraRegister(0x17, 0x13);
   writeCameraRegister(0x18, 0x01);
   writeCameraRegister(0x32, 0xB6);
@@ -214,7 +197,7 @@ void ov7670_setup(){
   writeCameraRegister(0x79, 0x26);
   writeCameraRegister(0xFF, 0xFF);
   writeCameraRegister(0x15, 0x20);
-  writeCameraRegister(0x0C, 0x04);
+  writeCameraRegister(0x0C, 0x08); // was 04
   writeCameraRegister(0x3E, 0x19);
   writeCameraRegister(0x72, 0x11);
   writeCameraRegister(0x73, 0xF1);
@@ -225,7 +208,7 @@ void ov7670_setup(){
   writeCameraRegister(0x1A, 0x7A);
   writeCameraRegister(0x03, 0x0A);
   writeCameraRegister(0xFF, 0xFF);
-  writeCameraRegister(0x12, 0x00);
+  writeCameraRegister(0x12, 0x08); // was 00
   writeCameraRegister(0x8C, 0x00);
   writeCameraRegister(0x04, 0x00);
   writeCameraRegister(0x40, 0xC0);
@@ -238,11 +221,14 @@ void ov7670_setup(){
   writeCameraRegister(0x54, 0x80);
   writeCameraRegister(0x3D, 0x40);
   writeCameraRegister(0xFF, 0xFF);
-  writeCameraRegister(0x11, 0x1F);
-  writeCameraRegister(0x0C, 0x08);
+  writeCameraRegister(0x11, 0b0010); // clock was 1F
+  
   writeCameraRegister(0x3E, 0x19);
+  writeCameraRegister(0x0C, 0x08);  // was one higher
   writeCameraRegister(0x73, 0xF1);
-  writeCameraRegister(0x12, 0x10);
+  writeCameraRegister(0x12, 0x08); // was 0x10
+
+    
   
   _CP0_SET_COUNT(0);
  while(_CP0_GET_COUNT()<48000000/2){}
@@ -273,7 +259,7 @@ int ov7670_count(unsigned char * d){
     //while(PORTCbits.RC9 == 0){
         // count the rows
         /*
-        new_href = PORTBbits.RB13==1;
+        new_href = PORTBbits.RB13;
         if (old_href == 0 && new_href==1){
             count++;
         }
@@ -282,6 +268,13 @@ int ov7670_count(unsigned char * d){
         
         // count the pclks per row
         pclk = 0;
+        while(PORTBbits.RB13 == 0){}
+        while(PORTBbits.RB13 == 1){}//1
+        while(PORTBbits.RB13 == 0){}
+        while(PORTBbits.RB13 == 1){}//2
+        while(PORTBbits.RB13 == 0){}
+        while(PORTBbits.RB13 == 1){}//3
+        
         while(PORTBbits.RB13 == 0){}
         while(PORTBbits.RB13 == 1){
             new_pclk = PORTAbits.RA8;
@@ -301,15 +294,10 @@ int ov7670_count(unsigned char * d){
 /*
 // INT3 / PCLK interrupt
 void __ISR(_EXTERNAL_3_VECTOR , IPL5SOFT) INT3ISR(void) {
-
 IFS0bits.INT3IF = 0;
-
 plck++;
-
 // set the duty cycle and direction pin
-
 }
-
 */
 
 //struct regval_list{
@@ -628,4 +616,3 @@ plck++;
 //
 //
 //
-

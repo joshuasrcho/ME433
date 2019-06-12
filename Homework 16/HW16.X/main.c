@@ -126,7 +126,6 @@ int main() {
     
     while(1) {
         
-
         _CP0_SET_COUNT(0);
         while(_CP0_GET_COUNT()<48000000*2){
             while(USER == 0){}
@@ -144,15 +143,16 @@ int main() {
         headTurn = RIGHT;
         DIR1 = 1;
         DIR2 = 0;
-        /*
+        
+        
         I++;
         sprintf(message,"I = %d   ", I);
-        drawString(160,92,message);
-        */
+        drawString(140,82,message);
+        
         unsigned char d[2000];
-       
+        
         int c = ov7670_count(d);
-        sprintf(message, "c = %d  ",c);
+        sprintf(message, "c = %d   ",c);
         drawString(140,92,message); // there are 290 rows
         /*
         int i = 0;
@@ -162,12 +162,12 @@ int main() {
             t=t+4;
             drawString(1,1+i*10,message);
         }
-        */ 
+         */
         
         int x = 0, x2 = 1;
         int y = 0;
         int dim = 0;
-        for(x = 0; x < 310; x++, x2=x2+2){
+        for(x = 0; x < c/2; x++, x2=x2+2){
             dim = d[x2]>>3;
             for(y=0;y<32;y++){
                 if (y == dim){
@@ -179,5 +179,13 @@ int main() {
             }
         }
         
+        /*
+        for(x = c/2; x < 310; x++){
+            for(y=0;y<32;y++){
+                LCD_drawPixel(y+30,x,ILI9341_WHITE);
+            }
+        }
+         * */
+         
     }
 }
