@@ -98,7 +98,7 @@ void startup() {
     IPC5bits.T5IP = 5; // interrupt priority 5
     IPC5bits.T5IS = 0; // interrupt subpriority 0
     IFS0bits.T5IF = 0; // clear interrupt flag
-    //IEC0bits.T5IE = 1; // enable interrupt
+    IEC0bits.T5IE = 1; // enable interrupt
     
   
     

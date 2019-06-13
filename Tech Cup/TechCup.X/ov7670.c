@@ -272,8 +272,7 @@ int ov7670_count_horz(unsigned char * d){
 }
 
 int ov7670_count_vert(unsigned char * d){
-    OC1RS = 0;
-    OC4RS = 0;
+    
     int rowclk = 0;
     int pclk = 0;
     int rowcount = 0;

@@ -45,6 +45,27 @@
 #define DIR1 LATAbits.LATA10
 #define DIR2 LATAbits.LATA7
 #define USER PORTBbits.RB4
+#define SERVO LATBbits.LATB2
+#define LEFT 2
+#define RIGHT 16
+
+volatile int interruptCounter = 0;
+volatile int headTurn = 0;
+int turnHeadLeft = 0;
+
+void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Timer5ISR(void) {
+    if (interruptCounter < headTurn){ // 2 to 6
+        SERVO = 1;
+    }
+    else{
+        SERVO = 0;
+        if (interruptCounter == 40){
+            interruptCounter = 0;
+        }
+    }
+    interruptCounter++;
+    IFS0bits.T5IF = 0; // clear interrupt flag
+}
 
 void startup() {
     // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
@@ -100,9 +121,17 @@ void startup() {
     ov7670_setup();
     
     // B3 is available as SCL2, B2 is available as SDA2
+    TRISBbits.TRISB2 = 0; // B2 is a digital output
+    SERVO = 1;
+    T5CONbits.TCKPS = 4; // Timer5 prescaler = 16
+    PR5 = 749; // PR = PBCLK / N / desiredF - 1 (4000Hz)
+    TMR5 = 0; // initial TMR5 count is 0
+    T5CONbits.ON = 1; // turn on Timer5
+    IPC5bits.T5IP = 5; // interrupt priority 5
+    IPC5bits.T5IS = 0; // interrupt subpriority 0
+    IFS0bits.T5IF = 0; // clear interrupt flag
     
-    
-    
+   
 }
 
 int main() {
@@ -146,7 +175,6 @@ int main() {
             }
         }
         */
-        
         // vertical read
         int c = ov7670_count_vert(d);
         sprintf(message, "c = %d   ",c);
@@ -219,8 +247,9 @@ int main() {
         // if com is more than c/2/2, then slow down right motor, full speed left motor
         // things to play with: the slope of the line, the value that determines when the motor is not full speed
         if (com < 25){
+            turnHeadLeft = 0;
             e = c/2/2 - com;
-            speed = 650 - (350/(c/2/2))*e; // when the com is all the way over, the motor is all off
+            speed = 650 - (650/(c/2/2))*e; // when the com is all the way over, the motor is all off
             if(speed > 650){
                 speed = 650;
             }
@@ -230,38 +259,42 @@ int main() {
             OC1RS = 650;
             OC4RS = speed;
         }
-        else if (com < 80){
+        else if (com < 90){
+            turnHeadLeft = 0;
             e = c/2/2 - com;
-            speed = 900 - (600/(c/2/2))*e; // when the com is all the way over, the motor is all off
+            speed = 800 - (800/(c/2/2))*e; // when the com is all the way over, the motor is all off
             if(speed > 900){
-                speed = 900;
+                speed = 800;
             }
             if(speed < 0){
                 speed = 0;
             }
-            OC1RS = 900;
+            OC1RS = 800;
             OC4RS = speed;
             
         }
-        else if (com < 120){
-            OC1RS = 900;
-            OC4RS = 900;
+        else if ((com < 110) && (com != 100)){
+            turnHeadLeft = 2;
+            OC1RS = 1000;
+            OC4RS = 1000;
         }
         else if ( com < 175){
+            turnHeadLeft = 1;
             e = com - c/2/2;
-            speed = 900 - (600/(c/2/2))*e; // when the com is all the way over, the motor is all off
-            if(speed > 900){
-                speed = 900;
+            speed = 800 - (800/(c/2/2))*e; // when the com is all the way over, the motor is all off
+            if(speed > 800){
+                speed = 800;
             }
             if(speed < 0){
                 speed = 0;
             }
             OC1RS = speed;
-            OC4RS = 900;
+            OC4RS = 800;
         }
         else{
+          turnHeadLeft = 1;
           e = com - c/2/2;
-            speed = 650 - (350/(c/2/2))*e; // when the com is all the way over, the motor is all off
+            speed = 650 - (650/(c/2/2))*e; // when the com is all the way over, the motor is all off
             if(speed > 650){
                 speed = 650;
             }
@@ -273,7 +306,21 @@ int main() {
         }
         _CP0_SET_COUNT(0);
         while(_CP0_GET_COUNT()<48000000/2/4){
-        }
+            if (turnHeadLeft == 1){
+                headTurn = LEFT;
+            }
+            else if (turnHeadLeft == 0){
+                headTurn = RIGHT;
+            }
+            else{
+                headTurn = 9;
+            }
+            IEC0bits.T5IE = 1; // enable interrupt
+        } 
+        IEC0bits.T5IE = 0; // disable interrupt
+        
+        OC1RS = 0;
+        OC4RS = 0;
          
 
     }
