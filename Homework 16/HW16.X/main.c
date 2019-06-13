@@ -10,11 +10,12 @@
 #define DIR2 LATAbits.LATA7
 #define USER PORTBbits.RB4
 #define SERVO LATBbits.LATB2
-#define LEFT 2;
-#define RIGHT 6;
+#define LEFT 2
+#define RIGHT 6
 
 volatile int interruptCounter = 0;
 volatile int headTurn = 0;
+
 
 void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Timer5ISR(void) {
     if (interruptCounter < headTurn){ // 2 to 6
@@ -28,6 +29,10 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Timer5ISR(void) {
     }
     interruptCounter++;
     IFS0bits.T5IF = 0; // clear interrupt flag
+}
+
+void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
+    IFS0bits.T4IF = 0; // clear interrupt flag
 }
 
 void startup() {
@@ -49,7 +54,7 @@ void startup() {
     TRISAbits.TRISA7 = 0; // DIR2
     DIR2 = 1;
     TRISAbits.TRISA10 = 0; // DIR1
-    DIR1 = 1;
+    DIR1 = 0;
     TRISBbits.TRISB4 = 1; // USER
     
     
@@ -60,7 +65,7 @@ void startup() {
     TMR3 = 0; // initial TMR3 count is 0
     OC1CONbits.OCM = 0b110; // PWM mode without fault pin
     OC1CONbits.OCTSEL = 1; // use timer3
-    OC1R = 0; // initialize before turning OC1 on; afterward it is read-only
+    OC1R = 600; // initialize before turning OC1 on; afterward it is read-only
     T3CONbits.ON = 1; // turn on Timer3
     OC1CONbits.ON = 1; // turn on OC1
     
@@ -68,7 +73,7 @@ void startup() {
     RPA4Rbits.RPA4R = 0b0101; // OC4 is A4, goes with DIR2
     OC4CONbits.OCM = 0b110; // PWM mode without fault pin
     OC4CONbits.OCTSEL = 1; // Use timer3
-    OC4R = 0; // initialize before turning OC4 on; afterward it is read-only
+    OC4R = 600; // initialize before turning OC4 on; afterward it is read-only
     OC4CONbits.ON = 1; // turn on OC4
    
     
@@ -95,6 +100,8 @@ void startup() {
     IFS0bits.T5IF = 0; // clear interrupt flag
     //IEC0bits.T5IE = 1; // enable interrupt
     
+  
+    
 }
 
 int main() {
@@ -109,26 +116,8 @@ int main() {
     char message[100];
     
     while(1) {
-        /*
-        _CP0_SET_COUNT(0);
-        while(_CP0_GET_COUNT()<48000000*2){
-            while(USER == 0){}
-        }
-        headTurn = LEFT;
-        DIR1 = 0;
-        DIR2 = 1;
-        OC1RS = 1200; // set PWM duty cycle for right motor
-        OC4RS = 1200; // set PWM duty cycle for left motor
         
-        _CP0_SET_COUNT(0);
-        while(_CP0_GET_COUNT()<48000000*2){
-            while(USER == 0){}
-        }
-        headTurn = RIGHT;
-        DIR1 = 1;
-        DIR2 = 0;
-        */
-        
+
         I++;
         sprintf(message,"I = %d   ", I);
         drawString(140,82,message);
@@ -141,22 +130,22 @@ int main() {
         sprintf(message, "c = %d   ",c);
         drawString(140,92,message); // there are 290 rows
         
-        int error = 0;
         int target_edge = c/4;
         int curr_edge = 0;
         int prev_y = 0;
+        int error = 0;
         
         int x = 0, x2 = 0;
         int y = 0;
         int dim = 0;
         for(x = 0; x < c/2; x++, x2=x2+2){
             dim = d[x2]>>3;
-            if (x%15 == 0){
+            if (x%10 == 0){
                 prev_y = dim;
                 sprintf(message, "%2d",prev_y);
                 drawString(x,65,message);
             }
-            if ((dim - prev_y) > 6){
+            if ((dim - prev_y) > 4){
                         curr_edge = x;
                     }
             for(y=0;y<32;y++){
@@ -173,12 +162,6 @@ int main() {
         // at this point, every other index of d[] is a brightness
         // loop through d[] and calculate where the middle of the dip or bump is
         // then set the motor speed and direction to follow the line
-
-                
-        sprintf(message, "AE = %d, CE = %3d",target_edge,curr_edge);
-        drawString(140,200,message);
         
-        error = curr_edge - target_edge;
-         
     }
 }
